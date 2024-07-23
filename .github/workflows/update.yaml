@@ -1,0 +1,45 @@
+name: Update
+on:
+  workflow_call:
+    inputs:
+      rev:
+        required: true
+        type: string
+jobs:
+  update:
+    name: Update version.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Update revision
+        uses: restackio/update-json-file-action@2.1
+        with:
+          file: version.json
+          fields: "{\"rev\": \"${{ inputs.rev }}\"}"
+
+      - name: Compute hash
+        run: echo sha256=$(nix-prefetch-url --unpack 'https://github.com/microsoft/WSL2-Linux-Kernel/archive/refs/tags/${{ inputs.rev }}.zip') >> $GITHUB_ENV
+      
+      - name: Update hash
+        uses: restackio/update-json-file-action@2.1
+        with:
+          file: version.json
+          fields: "{\"sha256\": \"${{ env.sha256 }}\"}"
+          
+      - name: Commit changes
+        run: |
+          git config user.name 'GitHub Actions'
+          git config user.email '<>'
+          git add version.json
+          git commit -m 'ci: update version to ${{ inputs.rev }}'
+          git push
+          
+      - name: Tag revision
+        run: |
+          git tag '${{ inputs.rev }}'
+          git push --tags

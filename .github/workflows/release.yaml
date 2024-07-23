@@ -1,0 +1,22 @@
+name: Release
+on:
+  workflow_call:
+    inputs:
+      rev:
+        required: true
+        type: string
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.rev }}-vmlinux
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.rev }}
+          files: vmlinux

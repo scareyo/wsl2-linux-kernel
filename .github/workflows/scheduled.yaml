@@ -1,0 +1,31 @@
+name: ⏰ Scheduled Update
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 0,12 * * *'
+jobs:
+  check:
+    name: Check
+    uses: ./.github/workflows/check.yaml
+
+  update:
+    name: Update
+    uses: ./.github/workflows/update.yaml
+    needs: check
+    if: needs.check.outputs.rev != ''
+    with:
+      rev: ${{ needs.check.outputs.rev }}
+
+  build:
+    name: Build
+    uses: ./.github/workflows/build.yaml
+    needs: [ check, update ]
+    with:
+      rev: ${{ needs.check.outputs.rev }}
+
+  release:
+    name: Release
+    uses: ./.github/workflows/release.yaml
+    needs: [ check, build ]
+    with:
+      rev: ${{ needs.check.outputs.rev }}

@@ -1,0 +1,41 @@
+name: Check
+on:
+  workflow_call:
+    outputs:
+      rev:
+        description: "A new revision, if available"
+        value: ${{ jobs.check.outputs.rev }}
+jobs:
+  check:
+    name: Check for new release
+    runs-on: ubuntu-latest
+    outputs:
+      rev: ${{ steps.get-rev.outputs.rev }}
+    steps:
+      - name: Get latest release
+        uses: actions/github-script@v7
+        id: latest
+        with:
+          script: |
+            return await github.request('GET /repos/microsoft/WSL2-Linux-Kernel/releases/latest')
+      
+      - name: Get current release
+        uses: actions/github-script@v7
+        id: current
+        with:
+          script: |
+            try {
+              return await github.request('GET /repos/scareyo/wsl2-linux-kernel/releases/latest');
+            } catch (error) {
+              if (error.status == 404) {
+                console.log("No releases found");
+                return "{ \"data\": { \"tag_name\": \"\" } }";
+              } else {
+                throw error;
+              }
+            }
+      
+      - name: Check if latest and current match
+        id: get-rev
+        if: fromJson(steps.latest.outputs.result).data.tag_name != fromJson(steps.current.outputs.result).data.tag_name
+        run: echo rev='${{ fromJson(steps.latest.outputs.result).data.tag_name }}' >> $GITHUB_OUTPUT
